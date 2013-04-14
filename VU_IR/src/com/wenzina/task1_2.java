@@ -1,5 +1,7 @@
 package com.wenzina;
 
+import jargs.gnu.CmdLineParser;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -16,79 +18,79 @@ public class task1_2 {
 	static LinkedList<TermDf> terms = new LinkedList<TermDf>();
 	static LinkedList<LinkedList<Item>> mat = new LinkedList<LinkedList<Item>>();
 	static List<Document> docs = new ArrayList<Document>();
-	//static LinkedList<Document> docs = new LinkedList<Document>();
 	static Hashtable<String, Integer> termHash = new Hashtable<String, Integer>();
 	static boolean optSmall = false;
 	static boolean optMedium = false;
 	static boolean optLarge = false;
+	static boolean optVerbose = false;
+	static String optDirectory = "";  //C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset";	
+	static boolean optHeadline = true;
+	static boolean optBody = true;
+	static boolean optHelp = false;
 	static String group = "W1";
 	
 	public static void main(String[] args) {
-		
-		optLarge = true;
-		
+
+		// handling of the options
+		if(!optionHandling(args))
+			return;
+
+		// preparations
 		String prefix = "";
 		if(optSmall) prefix = "small";
 		if(optMedium) prefix = "medium";
 		if(optLarge) prefix = "large";
 		String nl = System.getProperty("line.separator");
 		DecimalFormat f = new DecimalFormat("#0.00000");
-		
-		
-		readFromFile(prefix+"_search.arff");
-		int N = mat.size();
-		String ordner = "C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset";
-		
+		String ordner = optDirectory;
 		String[] rankDocs = new String []  {"misc.forsale/76057", "talk.religion.misc/83561", "talk.politics.mideast/75422",
 				"sci.electronics/53720", "sci.crypt/15725", "misc.forsale/76165", "talk.politics.mideast/76261", "alt.atheism/53358",
 				"sci.electronics/54340", "rec.motorcycles/104389", "talk.politics.guns/54328", "misc.forsale/76468", "sci.crypt/15469",
 				"rec.sport.hockey/54171", "talk.religion.misc/84177", "rec.motorcycles/104727", "comp.sys.mac.hardware/52165",
 				"sci.crypt/15379", "sci.space/60779", "sci.med/59456"};
+
+		// read the arff file
+		readFromFile(prefix+"_search.arff");
+		int N = mat.size();
 		
-		System.out.println("Docs: N: "+N);
-		//output();
-		for(TermDf t: terms) {
-			if(t.getDf() > 0)
-				System.out.println(t.toString());
+		if(optVerbose) {
+			System.out.println("Docs: N: "+N);
+			for(TermDf t: terms) {
+				if(t.getDf() > 0)
+					System.out.println(t.toString());
+			}
 		}
 		
-		// -------------------------------
-		// calculate weights: euclidean normalization
+		// calculate weights of the documents: euclidean normalization
 		for(int row = 0; row < mat.size(); row++) {
-			// length of document vector
 			double sum = 0;
 			for(Item it: mat.get(row)) {
 				sum += it.getItemCnt()*it.getItemCnt();
-				//System.out.print("-");
 			}
 			double length = Math.sqrt(sum);
 			for(Item it: mat.get(row)) {
-				String s = terms.get(it.getItemCol()).getTerm();
+				//String s = terms.get(it.getItemCol()).getTerm();
 				it.weightNormalize(length);
-				//it.weightItemIDF(N, terms.get(it.getItemCol()).getDf());
-				//System.out.print("*");
 			}
-			//System.out.println("!");
 		}		
-		//output();
-
-		
+		// rank the documents
 		for(int k = 0; k < rankDocs.length; k++) {
-		//for(int k = 6; k < rankDocs.length; k++) {
-
 			SourceDoc sd = new SourceDoc(ordner + "/" +rankDocs[k]);
-			LinkedList<Item> qryVector = createQryVectorNew(sd.getTokens(false, true, true));
-			// output test
-			for(Item it: qryVector) {
-				//System.out.println(terms.get(it.getItemCol())+ " - " + it.getItemCnt());
+			LinkedList<Item> qryVector = createQryVectorNew(sd.getTokens(false, optHeadline, optBody));
+			if(optVerbose) {
+				for(Item it: qryVector) {
+					System.out.println(terms.get(it.getItemCol())+ " - " + it.getItemCnt());
+				}
 			}
 			// weight queryVector: weight: IDF
 			for(Item it: qryVector) {
-				String s = terms.get(it.getItemCol()).getTerm();
+				//String s = terms.get(it.getItemCol()).getTerm();
 				it.weightItemIDF(N, terms.get(it.getItemCol()).getDf());
 			}
-			for(Item it: qryVector) {
-				//System.out.println(terms.get(it.getItemCol())+ " - " + it.getItemCnt());
+			if(optVerbose) {
+				for(Item it: qryVector) {
+					System.out.println(terms.get(it.getItemCol())+ " - " + it.getItemCnt());
+				}
 			}
 			double[] qryArray = mapLinkedList2Array(qryVector);
 		
@@ -98,43 +100,33 @@ public class task1_2 {
 				double score = 0;
 				for(int col = 0; col < terms.size(); col++) {
 					if(qryArray[col] != 0 && docArray[col] != 0) {
-						//System.out.println("Yeah! "+ terms.get(col)+ " "+qryArray[col]+ " * "+docArray[col]);
 						score += qryArray[col] * docArray[col];
 					}
 				}
 				docs.get(row).setScore(score);
-				//System.out.print(".");
+				if (optVerbose) System.out.print(".");
 			}
 		
-			for(int i = 0; i < docs.size(); i++){
-				if(docs.get(i).getName().equalsIgnoreCase("53358"))
-					System.out.println("iiiii"+docs.get(i));
-			}
-			
 			List<Document> docs2Sort = new ArrayList<Document>();
 			for(Document d: docs) {
 				docs2Sort.add(d);
 			}
-			
-			
-			//Collections.sort(docs, new SortDocs());
 			Collections.sort(docs2Sort, new SortDocs());
-			System.out.println("!!!!!!!!!!!!!!!!!!");
-			for(int i = 0; i < 10; i++){
-				System.out.println(docs2Sort.get(i));
+			if(optVerbose) {
+				for(int i = 0; i < 10; i++){
+					System.out.println(docs2Sort.get(i));
+				}
 			}
 			
 			try {
 				File file = new File(prefix+"_topic"+(k+1)+"_group"+group+".txt");
 				FileWriter writer = new FileWriter(file, false);
 				for(int i = 0; i < 10; i++){
-					//writer.write("topic"+(k+1)+" Q0 "+docs.get(i).getClasses()+"/"+docs.get(i).getName() +" "+(i+1)+" "+f.format(docs.get(i).getScore())+ " group"+group+"_"+prefix);
 					writer.write("topic"+(k+1)+" Q0 "+docs2Sort.get(i).getClasses()+"/"+docs2Sort.get(i).getName() +" "+(i+1)+" "+f.format(docs2Sort.get(i).getScore())+ " group"+group+"_"+prefix);
 					if(i < 9)
 						writer.write(nl);
 					System.out.println(docs2Sort.get(i));
 				}
-				System.out.println("-----------------------------------");
 				writer.flush();
 		        writer.close();
 
@@ -144,6 +136,87 @@ public class task1_2 {
 		}
 	}
 
+    private static void printUsage() {
+        System.err.println(
+"Usage: task1_2 [{-v,--verbose}{-h,--headline}{-b,--body}{-?,--help}] [{-s,--small}|{-m,--medium}|{-l,--large}] -d directory");
+    }
+
+    private static boolean optionHandling(String[] args) {
+    	boolean ok = true;
+    	
+    	CmdLineParser parser = new CmdLineParser();
+       	CmdLineParser.Option small = parser.addBooleanOption('s', "small");
+    	CmdLineParser.Option medium = parser.addBooleanOption('m', "medium");
+    	CmdLineParser.Option large = parser.addBooleanOption('l', "large");
+    	CmdLineParser.Option verbose = parser.addBooleanOption('v', "verbose");
+    	CmdLineParser.Option path = parser.addStringOption('d', "directory");
+    	CmdLineParser.Option body = parser.addBooleanOption('b', "body");
+    	CmdLineParser.Option headline = parser.addBooleanOption('h', "headline");
+    	CmdLineParser.Option help = parser.addBooleanOption('?', "help");
+    	
+    	try {
+            parser.parse(args);
+        }
+        catch ( CmdLineParser.OptionException e ) {
+            System.err.println(e.getMessage());
+            printUsage();
+            System.exit(2);
+        }
+        optDirectory = (String)parser.getOptionValue(path, "");
+    	optSmall = (Boolean)parser.getOptionValue(small, Boolean.FALSE);
+    	optMedium = (Boolean)parser.getOptionValue(medium, Boolean.FALSE);
+    	optLarge = (Boolean)parser.getOptionValue(large, Boolean.FALSE);
+    	optVerbose = (Boolean)parser.getOptionValue(verbose, Boolean.FALSE);
+    	optHeadline = (Boolean)parser.getOptionValue(headline, Boolean.TRUE);
+    	optBody = (Boolean)parser.getOptionValue(body, Boolean.TRUE);
+    	optHelp = (Boolean)parser.getOptionValue(help, Boolean.FALSE);
+
+    	if(optHelp) {
+    		String nl = System.getProperty("line.separator");
+    		String out = "This program compares 20 different news in a given index file and returns the ranking of the top ten documents from the search index."+nl+nl;
+    		out += "Input file: [small|medium|large]_search.arff"+nl;
+    		out += "Output files: [small|medium|large]_topic?_groupW1.txt - one for every of the 20 search topics containing information in trec style"+nl;
+    		out += "Options: "+nl;
+    		out += "   -s: searches for an index file called small_search.arff"+nl;
+    		out += "   -m: searches for an index file called medium_search.arff"+nl;    		
+    		out += "   -l: searches for an index file called large_search.arff"+nl;
+    		out += "   these three options also determine the name of the output files, but only one is allowed"+nl+nl;
+    		out += "   -d: directory where the query files are stored"+nl;
+    		out += "   -h: do not include the subject of the news of the query document"+nl;
+    		out += "   -b: do not include the body of the news of the query document"+nl;
+    		out += "   -v: shows information during runtime"+nl;
+    		out += "   -?: shows this message"+nl;
+    		System.out.println(out);
+    		return false;
+    	}
+    	
+    	int cnt = 0;
+    	if(optSmall) cnt++;
+    	if(optMedium) cnt++;
+    	if(optLarge) cnt++;
+    	if(cnt == 0)  {
+    		System.err.println("you have to set one option for -s small or -m medium or -l large!");
+    		ok = false;
+    	}
+    	if(cnt > 1)  {
+    		System.err.println("only one of the options -s small or -m medium or -l large is allowed!");
+    		ok = false;
+    	}
+    	if(optDirectory.length() == 0) {
+    		System.err.println("the path to the directory for the documents is not set - see option - d directory!");
+    		ok = false;
+		} else {
+			File f = new File(optDirectory);
+			if(!f.exists()) {
+				System.err.println("path to the directory does not exist - see option - d directory!");
+				ok = false;
+			}
+		}
+    	if(!ok)
+			System.err.println("program TERMINATED!");
+    	return ok;
+    }
+	
 	
 	static double[] mapLinkedList2Array(LinkedList<Item> list) {
 		double[] d = new double[terms.size()];
@@ -227,24 +300,7 @@ public class task1_2 {
 					}
 				}
 				if(inDataSection) {
-					// for debug reasons
-					//if(row > 2800)
-					//	break;
-//System.out.println("Terms: "+terms.size());
-System.out.println("Line: "+row);
-					// V1
-					// String[] words = s.split(",");
-					// V2
-					/*int pos = 0;
-					int lastpos = -1;
-					String[] words = new String[terms.size()+2];
-					int cnti = 0;
-					while((pos = s.indexOf(",", lastpos+1)) > -1) {
-						words[cnti] = s.substring(lastpos+1, pos);
-						lastpos = pos;
-						cnti++;
-					}
-					words[cnti] = s.substring(lastpos+1); */
+					if(optVerbose) System.out.println("DocumentData #: "+row+ "read!");
 					
 					String[] words = new String[terms.size()+2];
 					int cnti = 0;
@@ -259,13 +315,8 @@ System.out.println("Line: "+row);
 							target += s.charAt(i);
 					}
 					words[cnti] = target;
-
-					
 					
 					LinkedList<Item> itemList = new LinkedList<Item>();
-					/*int kk = words.length;
-					String s1 = words[words.length-2];
-					String s2 = words[words.length-1];*/
 					docs.add(new Document(words[words.length-2],words[words.length-1] ));
 
 					mat.add(itemList);
@@ -292,7 +343,6 @@ System.out.println("Line: "+row);
 	static void output() {
 		// test output
 		for(int row = 0; row < mat.size(); row++) {
-			//String line = "";
 			StringBuffer sb = new StringBuffer();
 			for(int col = 0; col < terms.size(); col++) {
 				double val = 0;
@@ -302,10 +352,8 @@ System.out.println("Line: "+row);
 						break;
 					}
 				}
-				//line +=","+val;
 				sb.append(","+val);
 			}
-			//System.out.println(docs.get(row)+":" +line);
 			System.out.println(docs.get(row)+":" +sb.toString());
 		}
 	}

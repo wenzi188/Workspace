@@ -24,13 +24,13 @@ C)
 1. Eingabeoptionen programmieren (http://args4j.kohsuke.org/) oder http://jargs.sourceforge.net/
    -m -s -l -S -B -L# -U# -t
 erl 2. Stemmer verwenden (in beiden Fällen)
-3. unterschiedliche Dateien erzeugen (small, medium, large)
-4. 60 Dateien erzeugen
+erl 3. unterschiedliche Dateien erzeugen (small, medium, large)
+erl 4. 60 Dateien erzeugen
 
 D) 
 1. jar-File mit Startskript
 2. README
-3. Zugang zu github
+erl 3. Zugang zu github
 4. Upload
 */
 

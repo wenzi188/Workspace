@@ -2,8 +2,6 @@ package com.wenzina;
 
 import java.io.*;
 
-import opennlp.tools.util.Version;
-
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 
