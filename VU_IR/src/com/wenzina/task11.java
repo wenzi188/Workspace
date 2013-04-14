@@ -28,7 +28,7 @@ erl 3. unterschiedliche Dateien erzeugen (small, medium, large)
 erl 4. 60 Dateien erzeugen
 
 D) 
-1. jar-File mit Startskript
+1. jar-File mit Startskript: java -cp firstTry.jar com.wenzina.task1_2 -?
 2. README
 erl 3. Zugang zu github
 4. Upload

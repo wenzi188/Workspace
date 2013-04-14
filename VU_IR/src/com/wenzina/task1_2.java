@@ -138,7 +138,8 @@ public class task1_2 {
 
     private static void printUsage() {
         System.err.println(
-"Usage: task1_2 [{-v,--verbose}{-h,--headline}{-b,--body}{-?,--help}] [{-s,--small}|{-m,--medium}|{-l,--large}] -d directory");
+"Usage: task1_2 [{-v,--verbose}{-h,--headline}{-b,--body}{-?,--help}] [{-s,--small}|{-m,--medium}|{-l,--large}] -d directory\n");
+        System.err.println("use -? option for help");
     }
 
     private static boolean optionHandling(String[] args) {
