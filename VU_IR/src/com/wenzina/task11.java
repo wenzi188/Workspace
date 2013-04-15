@@ -21,7 +21,6 @@ public class task11 {
 	static int optUpperBound = -1;
 	static int optLowerBound = 0;
 	static boolean optStem = true;
-	static String path = "C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset";	
 	
 	static boolean optVerbose = false;
 	static String optDirectory = "";  //C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset";	
@@ -54,7 +53,7 @@ public class task11 {
 			System.out.println("Anzahl: "+cnt);
 		}
 		    
-		Hashtable<String, LinkedList<Posting>> terms = createInvertedIndexFromFiles(path);
+		Hashtable<String, LinkedList<Posting>> terms = createInvertedIndexFromFiles(optDirectory);
 																					 
 		List<String> liste = new ArrayList<String>(terms.keySet());
 		Collections.sort(liste); 
