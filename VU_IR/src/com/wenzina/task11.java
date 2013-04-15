@@ -1,5 +1,7 @@
 package com.wenzina;
 
+import jargs.gnu.CmdLineParser;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
@@ -8,94 +10,64 @@ import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 
-/* tbd
-A)
-erl 1. File lesen und Text extrahieren
-erl 2. Text tokenizen --> http://stackoverflow.com/questions/5836148/how-to-use-opennlp-with-java oder http://www.programcreek.com/2012/05/opennlp-tutorial/ 
-erl 3. uebergeordnete Schleife fuer alle Dateien aus Verzeichnis
-erl 4. RUN --> check ob ARFF Datei noch lesbar bzw. MemoryOverflow 
-
-B)
-erl 1.) task1_2: Referenz doc verarbeiten/tokenizen (siehe Klasse A1) und qryVector erzeugen
-erl 2.) scoring ( ist fertig?)
-erl 3.) Ausgabe im trec Format
-
-C)
-1. Eingabeoptionen programmieren (http://args4j.kohsuke.org/) oder http://jargs.sourceforge.net/
-   -m -s -l -S -B -L# -U# -t
-erl 2. Stemmer verwenden (in beiden Fällen)
-erl 3. unterschiedliche Dateien erzeugen (small, medium, large)
-erl 4. 60 Dateien erzeugen
-
-D) 
-1. jar-File mit Startskript: java -cp firstTry.jar com.wenzina.task1_2 -?
-2. README
-erl 3. Zugang zu github
-4. Upload
-*/
 
 public class task11 {
 
-	/**
-	 * @param args
-	 */
 	static List<Document> docList = new ArrayList<Document>();
 	static boolean optSmall = false;
 	static boolean optMedium = false;
 	static boolean optLarge = false;
-	static boolean optSubject = true;
 	static boolean optBody = true;
 	static int optUpperBound = -1;
 	static int optLowerBound = 0;
 	static boolean optStem = true;
 	static String path = "C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset";	
 	
+	static boolean optVerbose = false;
+	static String optDirectory = "";  //C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset";	
+	static boolean optHeadline = false;
+	static boolean optHelp = false;
+	static boolean optStemmer = false;
+	
+	
+	
 	public static void main(String[] args) {
-
 		
-		//optLowerBound = 2;
-		optLarge = true;
+		// handling of the options
+		if(!optionHandling(args))
+			return;
 		
-		// preparation
-		// SourceDoc sd = new SourceDoc("C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset/alt.atheism/51120");
-		// String[] tok = sd.getTokens(false, true, true);
-
 		int cnt = 0;
-		//File folder = new File("C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset");
-		File folder = new File(path);
+		File folder = new File(optDirectory);
 		File[] listOfFiles = folder.listFiles();
-		for (File file : listOfFiles) {
-		    if (file.isDirectory()) {
-				for (File file2 : file.listFiles()) {
-				    if (file2.isFile()) {
-				        System.out.println(file2.getAbsolutePath());
-				        cnt++;
-				    }
+		if(optVerbose) {
+			for (File file : listOfFiles) {
+				if (file.isDirectory()) {
+					for (File file2 : file.listFiles()) {
+						if (file2.isFile()) {
+							System.out.println(file2.getAbsolutePath());
+							cnt++;
+						}
+					}
 				}
-		    }
+			}
+			System.out.println("Anzahl: "+cnt);
 		}
-		System.out.println("Anzahl: "+cnt);
 		    
-		// ---------------------------
-		// Hashtable<String, LinkedList<Posting>> terms = createInvertedIndex();
-		
 		Hashtable<String, LinkedList<Posting>> terms = createInvertedIndexFromFiles(path);
 																					 
-		
-		// writeStatistic(terms);
-		// System.exit(0);
-		
-		// test output
 		List<String> liste = new ArrayList<String>(terms.keySet());
 		Collections.sort(liste); 
-		for(String key: liste) {
-			System.out.print("["+key+"]");
-			LinkedList<Posting> poli = terms.get(key);
-			for(Posting p: poli) {
-				//System.out.print(" Doc: "+ p.getDocId()+"<"+p.getTF()+">");
-				System.out.print(" Doc: "+ p.getDocId()+"<"+p.getTF()+">");
+		if(optVerbose) {
+			for(String key: liste) {
+				System.out.print("["+key+"]");
+				LinkedList<Posting> poli = terms.get(key);
+				for(Posting p: poli) {
+					//System.out.print(" Doc: "+ p.getDocId()+"<"+p.getTF()+">");
+					System.out.print(" Doc: "+ p.getDocId()+"<"+p.getTF()+">");
+				}
+				System.out.println();
 			}
-			System.out.println();
 		}
 		
 		createARFF(terms);
@@ -107,7 +79,6 @@ public class task11 {
 		Hashtable<String, LinkedList<Posting>> terms = new  Hashtable<String, LinkedList<Posting>>();
 		
 		int docIndex = 0;
-// --> loop over folders		for(String s: docs){
 
 		File folder = new File(startPath);
 		File[] listOfFiles = folder.listFiles();
@@ -115,36 +86,33 @@ public class task11 {
 		    if (file.isDirectory()) {
 				for (File file2 : file.listFiles()) {
 				    if (file2.isFile()) {
-				        System.out.println(file2.getAbsolutePath());
+				    	if(optVerbose)
+				    		System.out.println(file2.getAbsolutePath());
 
-		
-			//SourceDoc sd = new SourceDoc("C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset/alt.atheism/51120");
-		    SourceDoc sd = new SourceDoc(file2.getAbsolutePath());
-			String[] words = sd.getTokens(false, true, true);
-			docList.add(new Document(sd.getName(), sd.getClasses()));
-			for(String word: words) {
-				if(word.length() == 0)
-					continue;
-				// test fuer alle a woerter
-				//if(word.indexOf("a")!=0)
-				//	continue;
-				boolean inserted = false;
-				if(!terms.containsKey(word)) {
-					terms.put(word, new LinkedList<Posting>());
-				}
-				LinkedList<Posting> poli = terms.get(word);
-				if(poli.size() > 0) {
-					if(poli.get(poli.size()-1).getDocId() == docIndex) {
-						poli.get(poli.size()-1).incrementTF();
-						inserted = true;
-					}
-				}
-				if(!inserted)
-					poli.add(new Posting(docIndex));
-			}
-			docIndex++;
-			System.out.println("Terms: "+ terms.size());
-				    }
+				        SourceDoc sd = new SourceDoc(file2.getAbsolutePath(), optStemmer);
+				        String[] words = sd.getTokens(true, true);
+				        docList.add(new Document(sd.getName(), sd.getClasses()));
+				        for(String word: words) {
+				        	if(word.length() == 0)
+				        		continue;
+				        	boolean inserted = false;
+				        	if(!terms.containsKey(word)) {
+				        		terms.put(word, new LinkedList<Posting>());
+				        	}
+				        	LinkedList<Posting> poli = terms.get(word);
+				        	if(poli.size() > 0) {
+				        		if(poli.get(poli.size()-1).getDocId() == docIndex) {
+				        			poli.get(poli.size()-1).incrementTF();
+				        			inserted = true;
+				        		}
+				        	}
+				        	if(!inserted)
+				        		poli.add(new Posting(docIndex));
+				        }
+				        docIndex++;
+				        if(optVerbose)
+				        	System.out.println("Terms: "+ terms.size());
+				    	}
 					}
 			    }
 			}
@@ -163,7 +131,7 @@ public class task11 {
 			FileWriter writer = new FileWriter(file ,true);
 			for(String key: liste) {
 				LinkedList<Posting> poli = terms.get(key);
-				writer.write(key + ";"+poli.size()+"\n");
+				writer.write(key + ";"+poli.size()+nl);
 			}
 			writer.flush();
 	        writer.close();
@@ -172,39 +140,6 @@ public class task11 {
 		}
 	}
 	
-	
-	
-	static Hashtable<String, LinkedList<Posting>> createInvertedIndex() {
-		String[] docs = new String[3];
-		docs[0] = "The best insurance for the car";
-		docs[1] = "Auto Insurance at its best";
-		docs[2] = "The best car I have ever seen";
-		
-		Hashtable<String, LinkedList<Posting>> terms = new  Hashtable<String, LinkedList<Posting>>();
-		
-		int docIndex = 0;
-		for(String s: docs){
-			s = s.toLowerCase();
-			String[] words = s.split(" ");
-			for(String word: words) {
-				boolean inserted = false;
-				if(!terms.containsKey(word)) {
-					terms.put(word, new LinkedList<Posting>());
-				}
-				LinkedList<Posting> poli = terms.get(word);
-				if(poli.size() > 0) {
-					if(poli.get(poli.size()-1).getDocId() == docIndex) {
-						poli.get(poli.size()-1).incrementTF();
-						inserted = true;
-					}
-				}
-				if(!inserted)
-					poli.add(new Posting(docIndex));
-			}
-			docIndex++;
-		}
-		return terms;
-	}
 	
 	static void createARFF(Hashtable<String, LinkedList<Posting>> terms) {
 		String prefix = "";
@@ -295,4 +230,101 @@ public class task11 {
 		return sb.toString();
 	}
 
+    private static void printUsage() {
+        System.err.println(
+"Usage: task1_1 [{-v,--verbose}{-h,--headline}{-b,--body}{-?,--help}{-t,--stem}}] [{-s,--small}|{-m,--medium}|{-l,--large} {-L, --Lower #} {-U, --upper #}] -d directory\n");
+        System.err.println("use -? option for help");
+    }
+
+    private static boolean optionHandling(String[] args) {
+    	boolean ok = true;
+    	
+    	CmdLineParser parser = new CmdLineParser();
+       	CmdLineParser.Option small = parser.addBooleanOption('s', "small");
+    	CmdLineParser.Option medium = parser.addBooleanOption('m', "medium");
+    	CmdLineParser.Option large = parser.addBooleanOption('l', "large");
+    	CmdLineParser.Option verbose = parser.addBooleanOption('v', "verbose");
+    	CmdLineParser.Option path = parser.addStringOption('d', "directory");
+    	CmdLineParser.Option body = parser.addBooleanOption('b', "body");
+    	CmdLineParser.Option stemmer = parser.addBooleanOption('t', "stemmer");
+    	CmdLineParser.Option headline = parser.addBooleanOption('h', "headline");
+    	CmdLineParser.Option help = parser.addBooleanOption('?', "help");
+    	CmdLineParser.Option lower = parser.addIntegerOption('L', "lower");
+    	CmdLineParser.Option upper = parser.addIntegerOption('U', "upper");
+    	
+    	try {
+            parser.parse(args);
+        }
+        catch ( CmdLineParser.OptionException e ) {
+            System.err.println(e.getMessage());
+            printUsage();
+            System.exit(2);
+        }
+        optDirectory = (String)parser.getOptionValue(path, "");
+    	optSmall = (Boolean)parser.getOptionValue(small, Boolean.FALSE);
+    	optMedium = (Boolean)parser.getOptionValue(medium, Boolean.FALSE);
+    	optLarge = (Boolean)parser.getOptionValue(large, Boolean.FALSE);
+    	optVerbose = (Boolean)parser.getOptionValue(verbose, Boolean.FALSE);
+    	optHeadline = (Boolean)parser.getOptionValue(headline, Boolean.FALSE);
+    	optBody = (Boolean)parser.getOptionValue(body, Boolean.FALSE);
+    	optStemmer = (Boolean)parser.getOptionValue(stemmer, Boolean.FALSE);
+    	optHelp = (Boolean)parser.getOptionValue(help, Boolean.FALSE);
+    	optLowerBound = (Integer)parser.getOptionValue(lower, 0);
+    	optUpperBound = (Integer)parser.getOptionValue(upper, -1);
+    	
+
+    	if(optHelp) {
+    		String nl = System.getProperty("line.separator");
+    		String out = "This program creates an inverted index of the documents in the given directory and returns an ARFF file including the requested information (term frequencies per document)."+nl+nl;
+    		out += "Input files: documents to be indexed located in the given directory"+nl;
+    		out += "Output file: [small|medium|large]_search.arff - depending on th eoptions -s,-m or -l"+nl;
+    		out += "Options: "+nl;
+    		out += "   -s: creates an index file called small_search.arff"+nl;
+    		out += "   -m: creates an index file called medium_search.arff"+nl;    		
+    		out += "   -l: creates an index file called large_search.arff"+nl;
+    		out += "    the three options above also determine the name of the output files, but only one is allowed"+nl+nl;
+    		out += "   -d: directory where the files to be indexed are stored"+nl;
+    		out += "   -h: includes the subject of the news "+nl;
+    		out += "   -b: includes the body of the news"+nl;
+    		out += "   -t: use stemmer"+nl;
+    		out += "   -v: shows debug information during runtime"+nl;
+    		out += "   -L #: lower bound for the term frequency"+nl;
+    		out += "   -U #: upper bound for the term frequency"+nl;
+    		out += "   -?: shows this message"+nl;
+    		System.out.println(out);
+    		return false;
+    	}
+    	
+    	int cnt = 0;
+    	if(optSmall) cnt++;
+    	if(optMedium) cnt++;
+    	if(optLarge) cnt++;
+    	if(cnt == 0)  {
+    		System.err.println("you have to set one option for -s small or -m medium or -l large!");
+    		ok = false;
+    	}
+    	if(cnt > 1)  {
+    		System.err.println("only one of the options -s small or -m medium or -l large is allowed!");
+    		ok = false;
+    	}
+    	if(optDirectory.length() == 0) {
+    		System.err.println("the path to the directory for the documents is not set - see option - d directory!");
+    		ok = false;
+		} else {
+			File f = new File(optDirectory);
+			if(!f.exists()) {
+				System.err.println("path to the directory does not exist - see option - d directory!");
+				ok = false;
+			}
+		}
+    	if(!optHeadline && !optBody) {
+    		System.err.println("at least one of the options -b or -h must be set!");
+    		ok = false;
+    	}    	
+    	if(!ok)
+			System.err.println("program TERMINATED!");
+    	return ok;
+    }
+	
+	
 }

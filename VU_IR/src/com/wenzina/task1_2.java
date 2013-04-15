@@ -24,9 +24,10 @@ public class task1_2 {
 	static boolean optLarge = false;
 	static boolean optVerbose = false;
 	static String optDirectory = "";  //C:/projects/reinhardt/PhD/ECTS/InformationRetrieval/Ex1/20_newsgroups_subset";	
-	static boolean optHeadline = true;
-	static boolean optBody = true;
+	static boolean optHeadline = false;
+	static boolean optBody = false;
 	static boolean optHelp = false;
+	static boolean optStemmer = false;
 	static String group = "W1";
 	
 	public static void main(String[] args) {
@@ -75,8 +76,8 @@ public class task1_2 {
 		}		
 		// rank the documents
 		for(int k = 0; k < rankDocs.length; k++) {
-			SourceDoc sd = new SourceDoc(ordner + "/" +rankDocs[k]);
-			LinkedList<Item> qryVector = createQryVectorNew(sd.getTokens(false, optHeadline, optBody));
+			SourceDoc sd = new SourceDoc(ordner + "/" +rankDocs[k], optStemmer);
+			LinkedList<Item> qryVector = createQryVectorNew(sd.getTokens(optHeadline, optBody));
 			if(optVerbose) {
 				for(Item it: qryVector) {
 					System.out.println(terms.get(it.getItemCol())+ " - " + it.getItemCnt());
@@ -125,7 +126,8 @@ public class task1_2 {
 					writer.write("topic"+(k+1)+" Q0 "+docs2Sort.get(i).getClasses()+"/"+docs2Sort.get(i).getName() +" "+(i+1)+" "+f.format(docs2Sort.get(i).getScore())+ " group"+group+"_"+prefix);
 					if(i < 9)
 						writer.write(nl);
-					System.out.println(docs2Sort.get(i));
+					if(optVerbose) 
+						System.out.println(docs2Sort.get(i));
 				}
 				writer.flush();
 		        writer.close();
@@ -138,7 +140,7 @@ public class task1_2 {
 
     private static void printUsage() {
         System.err.println(
-"Usage: task1_2 [{-v,--verbose}{-h,--headline}{-b,--body}{-?,--help}] [{-s,--small}|{-m,--medium}|{-l,--large}] -d directory\n");
+"Usage: task1_2 [{-v,--verbose}{-h,--headline}{-b,--body}{-?,--help}{-t,--stem}}] [{-s,--small}|{-m,--medium}|{-l,--large}] -d directory\n");
         System.err.println("use -? option for help");
     }
 
@@ -152,6 +154,7 @@ public class task1_2 {
     	CmdLineParser.Option verbose = parser.addBooleanOption('v', "verbose");
     	CmdLineParser.Option path = parser.addStringOption('d', "directory");
     	CmdLineParser.Option body = parser.addBooleanOption('b', "body");
+    	CmdLineParser.Option stemmer = parser.addBooleanOption('t', "stemmer");
     	CmdLineParser.Option headline = parser.addBooleanOption('h', "headline");
     	CmdLineParser.Option help = parser.addBooleanOption('?', "help");
     	
@@ -168,8 +171,9 @@ public class task1_2 {
     	optMedium = (Boolean)parser.getOptionValue(medium, Boolean.FALSE);
     	optLarge = (Boolean)parser.getOptionValue(large, Boolean.FALSE);
     	optVerbose = (Boolean)parser.getOptionValue(verbose, Boolean.FALSE);
-    	optHeadline = (Boolean)parser.getOptionValue(headline, Boolean.TRUE);
-    	optBody = (Boolean)parser.getOptionValue(body, Boolean.TRUE);
+    	optHeadline = (Boolean)parser.getOptionValue(headline, Boolean.FALSE);
+    	optBody = (Boolean)parser.getOptionValue(body, Boolean.FALSE);
+    	optStemmer = (Boolean)parser.getOptionValue(stemmer, Boolean.FALSE);
     	optHelp = (Boolean)parser.getOptionValue(help, Boolean.FALSE);
 
     	if(optHelp) {
@@ -181,11 +185,12 @@ public class task1_2 {
     		out += "   -s: searches for an index file called small_search.arff"+nl;
     		out += "   -m: searches for an index file called medium_search.arff"+nl;    		
     		out += "   -l: searches for an index file called large_search.arff"+nl;
-    		out += "   these three options also determine the name of the output files, but only one is allowed"+nl+nl;
+    		out += "    the three options above also determine the name of the output files, but only one is allowed"+nl+nl;
     		out += "   -d: directory where the query files are stored"+nl;
-    		out += "   -h: do not include the subject of the news of the query document"+nl;
-    		out += "   -b: do not include the body of the news of the query document"+nl;
-    		out += "   -v: shows information during runtime"+nl;
+    		out += "   -h: includes the subject of the news of the query document"+nl;
+    		out += "   -b: includes the body of the news of the query document"+nl;
+    		out += "   -t: use stemmer"+nl;
+    		out += "   -v: shows debug information during runtime"+nl;
     		out += "   -?: shows this message"+nl;
     		System.out.println(out);
     		return false;
@@ -213,6 +218,11 @@ public class task1_2 {
 				ok = false;
 			}
 		}
+    	if(!optHeadline && !optBody) {
+    		System.err.println("at least one of the options -b or -h must be set!");
+    		ok = false;
+    	}
+    	
     	if(!ok)
 			System.err.println("program TERMINATED!");
     	return ok;
@@ -331,8 +341,10 @@ public class task1_2 {
 					row++;
 					words = null;
 					System.gc();
-					long memoryLater = Runtime.getRuntime().freeMemory();
-					System.out.println("Mem: "+memoryLater);
+					if(optVerbose) {
+						long memoryLater = Runtime.getRuntime().freeMemory();
+						System.out.println("Mem: "+memoryLater);
+					}
 				}
 			}
 			fr.close();

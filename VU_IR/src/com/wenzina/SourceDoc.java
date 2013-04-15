@@ -4,14 +4,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-//import opennlp.tools.tokenize.*;
-//import opennlp.maxent.*;
-//import opennlp.tools.util.*;
-
-
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.Token;
-import org.apache.lucene.analysis.standard.*;
 
 
 public class SourceDoc {
@@ -21,15 +15,11 @@ public class SourceDoc {
 	String body; 
 	String path;
 	
-	// for OpenNLP
-	//static InputStream is;
-	//static TokenizerModel model;
-	//static Tokenizer tokenizer;
 
 	static Analyzer analyzer;
 	
 	
-	SourceDoc (String p) {
+	SourceDoc (String p, boolean optStemmer) {
 		path = p;
 		File file = new File(p);
 		String absolutePath = file.getAbsolutePath();
@@ -58,13 +48,8 @@ public class SourceDoc {
 			}
 			fr.close();
 
-			// Version 1: OpenNLP
-			// is = new FileInputStream("en-token.bin");
-			// model = new TokenizerModel(is);
-			// tokenizer = new TokenizerME(model);
-
 			// Version 2: Lucene
-			analyzer = new MyAnalyzer();
+			analyzer = new MyAnalyzer(optStemmer);
 			
 			
 		
@@ -82,7 +67,7 @@ public class SourceDoc {
 	}
 	
 	
-	String[] getTokens(boolean stemming, boolean inclSubject, boolean inclBody) {
+	String[] getTokens(boolean inclSubject, boolean inclBody) {
 		if(!inclSubject && !inclBody)
 			return new String[] {""};
 		String myText = "";
@@ -91,20 +76,6 @@ public class SourceDoc {
 		if(inclBody)
 			myText += " "+body;
 		try {
-			// version1: opnenlp
-			//InputStream is = new FileInputStream("en-token.bin");
-			//TokenizerModel model = new TokenizerModel(is);
-			//Tokenizer tokenizer = new TokenizerME(model);
-			//String tokens[] = tokenizer.tokenize(myText);
-			//is.close();
-			// for(int i = 0; i < tokens.length; i++) {
-			//	tokens[i] = tokens[i].replace(".", "");
-			//	if(!tokens[i].matches ("([A-Za-z])*"))
-			//		tokens[i] = "";
-			//	else
-			//		tokens[i] = tokens[i].toLowerCase();
-			//}
-
 			// version2 lucene
 			Reader reader = new StringReader(myText);
 			TokenStream ts = analyzer.tokenStream(null, reader);
@@ -112,7 +83,6 @@ public class SourceDoc {
 			int counter = 0;
 			List<String> tokLi = new ArrayList<String>();
 			while(token != null) {
-				// System.out.println(token.termText());
 				if(token.termText().matches ("([A-Za-z])*")) {
 					tokLi.add(token.termText());
 					counter++;
@@ -126,25 +96,11 @@ public class SourceDoc {
 				tokens[counter2] = s;
 				counter2++;
 			}
-				
-			
-			
-			/*for(int i = 0; i < tokens.length; i++) {
-				tokens[i] = tokens[i].replace(".", "");
-				if(!tokens[i].matches ("([A-Za-z])*"))
-					tokens[i] = "";
-				else
-					tokens[i] = tokens[i].toLowerCase();
-			} */
 			return tokens;
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 			return new String[] {""};
 		}
-		
-
 	}
-	
-	
 }
