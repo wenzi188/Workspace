@@ -23,10 +23,6 @@ public class BM25Ranker {
 	int Ndocuments;
 	double Lave;
 	
-	static final double _k1 = 1.2;
-	static final double _k3 = _k1;
-	static final double _b = 0.75; 
-
 
 	public BM25Ranker(int oSize, boolean oVerbose) {
 		optSize = oSize;
@@ -57,7 +53,7 @@ public class BM25Ranker {
 	}
 	
 	
-	void rankDocument(String path, boolean optStemmer, boolean optHeadline, boolean optBody) {
+	void rankDocument(String path, boolean optStemmer, boolean optHeadline, boolean optBody, double _k1, double _k3, double _b) {
 		SourceDoc sd = new SourceDoc(path, optStemmer);
 		LinkedList<Item> qryVector = createQryVector(sd.getTokens(optHeadline, optBody));
 		double[] qryArray = mapLinkedList2Array(qryVector);
@@ -69,7 +65,6 @@ public class BM25Ranker {
 				// only if term appears in both vectors
 				if(qryArray[col] != 0 && docArray[col] != 0) {
 					double f1 = Math.log10(Ndocuments/(double)terms.get(col).getDf());
-					// double f21 = ((_k1+1)*mat.get(row).get(col).getItemCnt());
 					double f21 = ((_k1+1)*docArray[col]);
 					double f22 = (double)((_k1*((1-_b)+_b*(getDocumentLength(mat.get(row))/Lave))+docArray[col]));
 					double f3 = ((_k3+1)* qryArray[col])/(double)(_k3 + qryArray[col]);
@@ -158,9 +153,6 @@ public class BM25Ranker {
 			FileReader fr = new FileReader(path);
 			BufferedReader br = new BufferedReader(fr);
 			while((s = br.readLine()) != null) {
-				
-				//if(row > 399)
-				//	break;
 				
 				if(s.charAt(0) == '%')
 					continue;
